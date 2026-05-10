@@ -1,0 +1,44 @@
+# =============================================================================
+# backend/.dockerignore
+# Files and directories excluded from the Docker build context.
+# =============================================================================
+
+# Secrets — NEVER bake these into the image
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Tests and dev tooling (not needed in the runtime image)
+tests/
+requirements-dev.txt
+.coverage
+coverage.xml
+htmlcov/
+
+# Version control
+.git/
+.gitignore
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db

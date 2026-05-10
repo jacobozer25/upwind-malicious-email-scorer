@@ -1,0 +1,110 @@
+# =============================================================================
+# docker-compose.yml
+# Local development orchestration for the Malicious Email Scorer.
+#
+# Services
+# ========
+# * backend  — FastAPI app built from backend/Dockerfile
+# * redis    — Redis 7 (alpine) for rate limiting and semantic cache
+#
+# Usage
+# =====
+#   # Start all services (builds backend image on first run):
+#   docker compose up --build
+#
+#   # Start in detached mode:
+#   docker compose up -d --build
+#
+#   # View logs:
+#   docker compose logs -f backend
+#
+#   # Stop and remove containers (keeps volumes):
+#   docker compose down
+#
+#   # Stop and remove containers + volumes:
+#   docker compose down -v
+#
+# Environment variables
+# =====================
+# The backend service reads its config from backend/.env at startup.
+# Required variables in backend/.env:
+#   LLM_PROVIDER=anthropic
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   LLM_MODEL=claude-3-5-sonnet-20240620
+#
+# Optional variables (have defaults):
+#   REDIS_URL=redis://redis:6379/0   ← set automatically by this compose file
+#   GOOGLE_AUDIENCE=                 ← empty = skip JWT verification in dev
+#   ENVIRONMENT=dev
+# =============================================================================
+
+services:
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: email-scorer-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - scorer-net
+
+  # ── Backend ────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: email-scorer-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override / supplement .env values for Docker networking.
+      REDIS_URL: "redis://redis:6379/0"
+      ENVIRONMENT: "dev"
+      EXPOSE_DOCS: "true"
+      LOG_LEVEL: "INFO"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - scorer-net
+    # Read-only root filesystem with writable tmpfs for temp files.
+    # Uncomment in production for hardened deployments:
+    # read_only: true
+    # tmpfs:
+    #   - /tmp:rw,noexec,nosuid,size=64m
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  redis_data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  scorer-net:
+    driver: bridge

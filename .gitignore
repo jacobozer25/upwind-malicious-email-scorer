@@ -1,0 +1,18 @@
+# --- Security & Secrets ---
+# Never commit secrets to the repository 
+.env
+.env.local
+secrets.json
+
+# --- Python Environment & Hygiene ---
+# Exclude local environments and cache 
+venv/
+.venv/
+env/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+
+# --- OS & Tooling ---
+.DS_Store
+.vscode/

@@ -1,0 +1,161 @@
+# =============================================================================
+# .github/workflows/ci.yml
+# CI pipeline for the Malicious Email Scorer backend.
+#
+# Jobs
+# ====
+# 1. lint      — Ruff (fast linter + formatter check)
+# 2. typecheck — Mypy (strict type checking)
+# 3. test      — Pytest with coverage gate (≥ 80%)
+#
+# Triggers
+# ========
+# * Every push to main / develop
+# * Every pull request targeting main / develop
+#
+# Secrets required
+# ================
+# None — tests use fake LLM providers and an in-memory Redis mock.
+# The ANTHROPIC_API_KEY is intentionally NOT set in CI to ensure tests
+# never make real API calls.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  PYTHON_VERSION: "3.11"
+  # Ensure tests never accidentally call real LLM APIs.
+  LLM_PROVIDER: "none"
+  ENVIRONMENT: "dev"
+  GOOGLE_AUDIENCE: ""
+
+jobs:
+
+  # ── Job 1: Lint ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install Ruff
+        run: pip install "ruff>=0.4.0,<1.0.0"
+
+      - name: Run Ruff linter
+        run: ruff check app/ tests/
+
+      - name: Run Ruff formatter check
+        run: ruff format --check app/ tests/
+
+  # ── Job 2: Type check ────────────────────────────────────────────────────────
+  typecheck:
+    name: Type Check (Mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run Mypy
+        run: mypy app/ --ignore-missing-imports --no-strict-optional
+
+  # ── Job 3: Test ──────────────────────────────────────────────────────────────
+  test:
+    name: Test (Pytest + Coverage)
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        env:
+          REDIS_URL: "redis://localhost:6379/0"
+          LLM_PROVIDER: "none"
+          ENVIRONMENT: "dev"
+          GOOGLE_AUDIENCE: ""
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=80 \
+            -v \
+            --tb=short \
+            --asyncio-mode=auto
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage.xml
+          retention-days: 7
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          python -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || true

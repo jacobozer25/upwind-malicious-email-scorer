@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "email-scorer-llm-output-v1.0.0",
+  "title": "EmailGuardian LLM Output Schema",
+  "description": "Strict JSON schema for the LLM verdict returned by EmailGuardian (system.md v1.0.0, Section 4).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "semantic_score",
+    "verdict",
+    "confidence",
+    "social_engineering_indicators",
+    "rationale",
+    "recommended_user_action",
+    "uncertainty_notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version — must be '1.0'."
+    },
+    "semantic_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maliciousness score 0–100 based on semantic/language signals only."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["benign", "suspicious", "likely_malicious", "malicious"],
+      "description": "Categorical verdict derived from semantic_score."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Model confidence in the verdict."
+    },
+    "social_engineering_indicators": {
+      "type": "array",
+      "description": "List of language-level social engineering signals detected.",
+      "items": {
+        "type": "object",
+        "required": ["category", "severity", "evidence_quote", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "urgency",
+              "authority",
+              "fear",
+              "scarcity",
+              "impersonation",
+              "credential_request",
+              "payment_redirection",
+              "unusual_channel",
+              "prompt_injection_attempt",
+              "tone_mismatch"
+            ],
+            "description": "Social engineering category."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Severity of this indicator."
+          },
+          "evidence_quote": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Verbatim quote (≤120 chars) from the email body supporting this finding."
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Brief explanation (≤200 chars) of why this is a red flag."
+          }
+        }
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "Plain-text rationale (≤600 chars, no markdown). At most 4 short sentences."
+    },
+    "recommended_user_action": {
+      "type": "string",
+      "enum": [
+        "safe_to_proceed",
+        "verify_via_separate_channel",
+        "do_not_click_or_reply",
+        "report_to_security_team"
+      ],
+      "description": "Recommended action for the end user."
+    },
+    "uncertainty_notes": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Notes on uncertainty (≤300 chars). Empty string if none."
+    }
+  }
+}
