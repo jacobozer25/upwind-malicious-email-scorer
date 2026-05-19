@@ -67,8 +67,8 @@ async def get_cached_verdict(
     key = _build_cache_key(body, findings, model)
 
     try:
-        from app.infrastructure.redis_cache import get_cache  # noqa: PLC0415
-        cache = get_cache()
+        from app.infrastructure.redis_cache import get_redis  # noqa: PLC0415
+        cache = get_redis()
         raw = await cache.get(key)
     except Exception as exc:  # noqa: BLE001
         log.warning(
@@ -119,9 +119,9 @@ async def set_cached_verdict(
     key = _build_cache_key(body, findings, model)
 
     try:
-        from app.infrastructure.redis_cache import get_cache  # noqa: PLC0415
-        cache = get_cache()
-        await cache.set(key, json.dumps(verdict), ttl=ttl_seconds)
+        from app.infrastructure.redis_cache import get_redis  # noqa: PLC0415
+        cache = get_redis()
+        await cache.set(key, json.dumps(verdict), ex=ttl_seconds)
         log.debug(
             "llm_cache.stored",
             extra={
