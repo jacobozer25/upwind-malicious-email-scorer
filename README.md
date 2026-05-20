@@ -183,7 +183,7 @@ Because the Gmail Add-on lives in Google's cloud, it cannot communicate directly
 1. Install and run [ngrok](https://ngrok.com/)
 2. Open new terminal:
 ```bash
-ngrok http 8080
+& "YourlocationOfThisFile\ngrok.exe" http 8080
 
 ```
 
