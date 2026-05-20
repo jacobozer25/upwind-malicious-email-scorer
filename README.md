@@ -174,7 +174,7 @@ docker compose up --build
 ```
 
 
-*The backend will now be running on `http://localhost:8000`.*
+*The backend will now be running on `http://localhost:8080`.*
 
 ### 2. Exposing the Backend (Ngrok)
 
@@ -182,7 +182,7 @@ Because the Gmail Add-on lives in Google's cloud, it cannot communicate directly
 
 1. Install and run [ngrok](https://ngrok.com/):
 ```bash
-ngrok http 8000
+ngrok http 8080
 
 ```
 
