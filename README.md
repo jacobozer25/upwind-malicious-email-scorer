@@ -181,6 +181,8 @@ docker compose up --build
 Because the Gmail Add-on lives in Google's cloud, it cannot communicate directly with your `localhost`. You must expose your local backend to the internet.
 
 1. Install and run [ngrok](https://ngrok.com/):
+2. Open new terminal:
+2ץ 
 ```bash
 ngrok http 8080
 
