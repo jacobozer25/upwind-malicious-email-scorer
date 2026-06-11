@@ -1,4 +1,4 @@
-# Malicious Email Scorer — Gmail Add-on
+# Autonomous-phishing-detector — Gmail Add-on
 
 > A Gmail Add-on that opens any email and tells the user, in seconds, **how dangerous it is and why** — with a defensible, explainable verdict produced by a hybrid deterministic + LLM pipeline.
 
